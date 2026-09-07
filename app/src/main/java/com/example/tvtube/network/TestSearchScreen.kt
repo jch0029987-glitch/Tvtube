@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -19,12 +18,12 @@ import kotlinx.coroutines.launch
 fun TestSearchScreen() {
     val scope = rememberCoroutineScope()
     var rawJson by remember { mutableStateOf("Press Test to fetch search results...") }
-    var titles = remember { mutableStateListOf<String>() }
+    val titles = remember { mutableStateListOf<String>() }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxSize().padding(24.dp)) {
             // Left Column: Controls & Titles
-            Column(modifier = Modifier.weight(1.dp).fillMaxHeight().padding(end = 16.dp)) {
+            Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(end = 16.dp)) {
                 Button(onClick = {
                     scope.launch {
                         try {
@@ -34,7 +33,6 @@ fun TestSearchScreen() {
                             val parsed = InnerTubeApiClient.searchVideos("Big Buck Bunny")
                             titles.clear()
                             
-                            // Extract video titles safely across possible renderer structures
                             val items = parsed.contents?.twoColumnSearchResultsRenderer?.primaryContents
                                 ?.sectionListRenderer?.contents
                                 ?: parsed.contents?.sectionListRenderer?.contents
@@ -59,7 +57,7 @@ fun TestSearchScreen() {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "Extracted Video Titles (${titles.size}):")
 
-                LazyColumn(modifier = Modifier.fillMaxHeight().weight(1.dp)) {
+                LazyColumn(modifier = Modifier.fillMaxHeight().weight(1f)) {
                     items(titles) { title ->
                         Text(text = "- $title", modifier = Modifier.padding(vertical = 4.dp))
                     }
@@ -69,7 +67,7 @@ fun TestSearchScreen() {
             // Right Column: Raw JSON Output
             Box(
                 modifier = Modifier
-                    .weight(1.dp)
+                    .weight(1f)
                     .fillMaxHeight()
                     .background(Color.DarkGray)
                     .padding(12.dp)
