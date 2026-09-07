@@ -9,22 +9,60 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider
 import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
+
+@Serializable
+data class GitHubRelease(
+    @SerialName("tag_name") val tagName: String,
+    val assets: List<GitHubAsset>
+)
+
+@Serializable
+data class GitHubAsset(
+    @SerialName("browser_download_url") val downloadUrl: String,
+    val name: String
+)
 
 object OtaUpdater {
     private const val CHANNEL_ID = "ota_updates"
     private const val NOTIFICATION_ID = 1001
+    private const val GITHUB_REPO = "jch0029987-glitch/tvtube"
 
-    suspend fun downloadAndInstall(context: Context, apkUrl: String) {
+    suspend fun checkForUpdates(context: Context, currentVersion: String, manualCheck: Boolean = false) {
+        val client = HttpClient {
+            install(ContentNegotiation) {
+                json(Json { ignoreUnknownKeys = true })
+            }
+        }
+        try {
+            val response: GitHubRelease = client.get("https://api.github.com/repos/$GITHUB_REPO/releases/latest").body()
+            if (response.tagName != currentVersion) {
+                val apkAsset = response.assets.firstOrNull { it.name.endsWith(".apk") }
+                if (apkAsset != null) {
+                    downloadAndInstall(context, apkAsset.downloadUrl)
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            client.close()
+        }
+    }
+
+    private suspend fun downloadAndInstall(context: Context, apkUrl: String) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel(notificationManager)
 
-        // Show starting notification
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_download)
-            .setTitle("TVTube Update")
+            .setTitle("TVTube Update Available")
             .setContentText("Downloading update...")
             .setOngoing(true)
             .setProgress(0, 0, true)
@@ -50,49 +88,28 @@ object OtaUpdater {
             }
 
             val pendingIntent = PendingIntent.getActivity(
-                context,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Update notification to ready state
             val completeBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setTitle("TVTube Update Ready")
-                .setContentText("Tap to install the latest version")
+                .setTitle("Update Ready")
+                .setContentText("Click to install TVTube")
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .setOngoing(false)
 
             notificationManager.notify(NOTIFICATION_ID, completeBuilder.build())
-
-            // Automatically launch the installer prompt
             context.startActivity(intent)
-
-        } catch (e: Exception) {
-            val errorBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.stat_notify_error)
-                .setTitle("TVTube Update Failed")
-                .setContentText("Could not download update file.")
-                .setAutoCancel(true)
-
-            notificationManager.notify(NOTIFICATION_ID, errorBuilder.build())
         } finally {
             client.close()
         }
     }
 
-    private fun createNotificationChannel(notificationManager: NotificationManager) {
+    private fun createNotificationChannel(manager: NotificationManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "App Updates",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Notifications for TVTube app updates"
-            }
-            notificationManager.createNotificationChannel(channel)
+            val channel = NotificationChannel(CHANNEL_ID, "App Updates", NotificationManager.IMPORTANCE_HIGH)
+            manager.createNotificationChannel(channel)
         }
     }
 }
