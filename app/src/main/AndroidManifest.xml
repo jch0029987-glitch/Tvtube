@@ -12,7 +12,7 @@
     <application
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
+        android:theme="@style/Theme.TVTube">
 
         <activity
             android:name=".MainActivity"
