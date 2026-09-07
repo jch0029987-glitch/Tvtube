@@ -20,6 +20,7 @@ import com.example.tvtube.ui.SettingsScreen
 import com.example.tvtube.updater.OtaUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.compose.ui.unit.dp
 
 class MainActivity : ComponentActivity() {
 
