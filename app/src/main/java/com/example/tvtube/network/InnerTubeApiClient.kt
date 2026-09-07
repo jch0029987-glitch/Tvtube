@@ -5,6 +5,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
@@ -21,6 +22,27 @@ object InnerTubeApiClient {
     }
 
     private const val BASE_URL = "https://www.youtube.com/youtubei/v1"
+
+    suspend fun searchRaw(query: String): String {
+        val payload = mapOf(
+            "context" to mapOf(
+                "client" to mapOf(
+                    "clientName" to "WEB",
+                    "clientVersion" to "2.20240405.01.00",
+                    "hl" to "en",
+                    "gl" to "US"
+                )
+            ),
+            "query" to query
+        )
+
+        val response: HttpResponse = client.post("$BASE_URL/search") {
+            contentType(ContentType.Application.Json)
+            header(HttpHeaders.UserAgent, UserAgents.CHROME_DESKTOP)
+            setBody(payload)
+        }
+        return response.bodyAsText()
+    }
 
     suspend fun searchVideos(query: String): SearchResponse {
         val payload = mapOf(
@@ -50,7 +72,8 @@ data class SearchResponse(
 
 @Serializable
 data class Contents(
-    val twoColumnSearchResultsRenderer: TwoColumnSearchResultsRenderer? = null
+    val twoColumnSearchResultsRenderer: TwoColumnSearchResultsRenderer? = null,
+    val sectionListRenderer: SectionListRenderer? = null
 )
 
 @Serializable
@@ -70,7 +93,13 @@ data class SectionListRenderer(
 
 @Serializable
 data class SectionContent(
-    val itemSectionRenderer: ItemSectionRenderer? = null
+    val itemSectionRenderer: ItemSectionRenderer? = null,
+    val musicShelfRenderer: MusicShelfRenderer? = null
+)
+
+@Serializable
+data class MusicShelfRenderer(
+    val contents: List<VideoItem>? = null
 )
 
 @Serializable
@@ -80,14 +109,21 @@ data class ItemSectionRenderer(
 
 @Serializable
 data class VideoItem(
-    val videoRenderer: VideoRenderer? = null
+    val videoRenderer: VideoRenderer? = null,
+    val compactVideoRenderer: CompactVideoRenderer? = null
+)
+
+@Serializable
+data class CompactVideoRenderer(
+    val videoId: String,
+    val title: RunWrapper
 )
 
 @Serializable
 data class VideoRenderer(
     val videoId: String,
     val title: RunWrapper,
-    val thumbnail: ThumbnailWrapper
+    val thumbnail: ThumbnailWrapper? = null
 )
 
 @Serializable
